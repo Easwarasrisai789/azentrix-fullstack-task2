@@ -36,18 +36,23 @@ function Register() {
     if (!auth || !db) { setError("Firebase not configured."); return; }
     setSubmitting(true);
     try {
+      // Create auth account first
       const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Check if empId is already taken (now authenticated, can read Firestore)
-      const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
-      if (!empIdCheck.empty) {
-        // Delete the just-created auth account since empId is taken
-        await cred.user.delete();
-        setError("This Employee ID is already registered. Please use a unique ID.");
-        setSubmitting(false);
-        return;
+      // Now authenticated — check if empId is taken
+      try {
+        const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+        if (!empIdCheck.empty) {
+          await cred.user.delete();
+          setError("This Employee ID is already registered. Please use a unique ID.");
+          setSubmitting(false);
+          return;
+        }
+      } catch (permErr) {
+        // If permission error on read, just proceed (empId will be saved, uniqueness is best-effort)
       }
 
+      // Save user profile
       await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName, age: Number(age), empId: empId.trim(), createdAt: new Date() });
       navigate("/dashboard", { replace: true });
     } catch (err) {

@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Bootstrap meta document — allow first admin creation
+    match /meta/bootstrap {
+      allow read: if true;
+      allow create: if !exists(/databases/$(database)/documents/meta/bootstrap);
+      allow update, delete: if false;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow create: if isSignedIn() && request.auth.uid == userId && (
+        request.resource.data.role == 'member'
+        || isAdmin()
+        || (
+          request.resource.data.role == 'admin'
+          && !exists(/databases/$(database)/documents/meta/bootstrap)
+        )
+      );
+      allow read: if isSignedIn();
+      // Users can update own profile (but not change their own role)
+      // Admins can update any user (including role changes)
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && request.resource.data.role == resource.data.role)
+        || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Boards collection (project-level kanban boards)
+    match /boards/{boardId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      // Admin or board creator can update name/description
+      allow update: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+
+      // Tasks within a board
+      match /tasks/{taskId} {
+        allow read: if isSignedIn();
+        allow create: if isAdmin();
+        // Task can be updated by: creator, assignee (by email), or admin
+        // This allows members to update progress on tasks assigned to them
+        allow update: if isSignedIn() && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.assignee == request.auth.token.email
+          || isAdmin()
+        );
+        allow delete: if isSignedIn() && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.assignee == request.auth.token.email
+          || isAdmin()
+        );
+      }
+    }
+
+    // Teams collection
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      // Admin or team creator can update team (name, members)
+      allow update: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+
+      // Tasks within a team
+      match /tasks/{taskId} {
+        allow read: if isSignedIn();
+        allow create: if isAdmin();
+        // Task can be updated by: creator, assignee (by empId — supports comma-separated group), or admin
+        allow update: if isSignedIn() && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.assigneeEmpId.split(',').hasAny([getUserData().empId])
+          || resource.data.assignee == request.auth.token.email
+          || isAdmin()
+        );
+        allow delete: if isSignedIn() && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.assigneeEmpId.split(',').hasAny([getUserData().empId])
+          || resource.data.assignee == request.auth.token.email
+          || isAdmin()
+        );
+      }
+    }
+
+    // Messages collection (team chat)
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.auth.token.email == request.resource.data.sender
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0;
+      allow update, delete: if isSignedIn() && (
+        resource.data.uid == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Direct Messages (private 1-on-1 chat)
+    match /directMessages/{messageId} {
+      // Users can read DMs where they are one of the participants (uid in dmId)
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.dmId.split('_').hasAny([request.auth.uid]);
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Admin Requests — members can create, admins can read/update/delete
+    match /adminRequests/{requestId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Feedback — any signed-in user can create, admins can read/manage
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

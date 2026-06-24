@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
 import AuthenticatedLayout from "../components/AuthenticatedLayout";
@@ -163,6 +163,21 @@ function Feedback() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [myFeedbacks, setMyFeedbacks] = useState([]);
+
+  // Load user's own feedback submissions
+  useEffect(() => {
+    if (!db || !currentUser) return;
+    const q = query(collection(db, "feedback"), where("uid", "==", currentUser.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      setMyFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => {
+        const aT = a.createdAt?.toDate?.() || new Date(0);
+        const bT = b.createdAt?.toDate?.() || new Date(0);
+        return bT - aT;
+      }));
+    });
+    return () => unsub();
+  }, [currentUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -263,6 +278,38 @@ function Feedback() {
             </form>
           )}
         </div>
+
+        {/* My Submissions */}
+        {myFeedbacks.length > 0 && (
+          <div style={{ ...s.card, maxWidth: "100%" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+              My Submissions ({myFeedbacks.length})
+            </h3>
+            <div style={{ display: "grid", gap: 10 }}>
+              {myFeedbacks.map((fb) => {
+                const statusColor = fb.status === "resolved" ? { bg: "#d1fae5", color: "#065f46" } : fb.status === "working on it" ? { bg: "#dbeafe", color: "#1e40af" } : { bg: "#fef3c7", color: "#92400e" };
+                return (
+                  <div key={fb.id} style={{ padding: "14px 16px", borderRadius: 12, background: "#f9fafb", border: "1px solid #e5e7eb" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <strong style={{ fontSize: "0.88rem", color: "#0f172a" }}>{fb.subject}</strong>
+                      <span style={{ padding: "3px 9px", borderRadius: 999, fontSize: "0.65rem", fontWeight: 700, background: statusColor.bg, color: statusColor.color }}>
+                        {fb.status || "open"}
+                      </span>
+                    </div>
+                    <p style={{ margin: "0 0 6px", fontSize: "0.82rem", color: "#64748b" }}>{fb.type} · {fb.createdAt?.toDate ? fb.createdAt.toDate().toLocaleDateString() : "—"}</p>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#334155", lineHeight: 1.5 }}>{fb.message}</p>
+                    {fb.adminReply && (
+                      <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10, background: "#eff6ff", border: "1px solid #dbeafe" }}>
+                        <strong style={{ fontSize: "0.72rem", color: "#1e40af" }}>Admin reply:</strong>
+                        <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#1e40af" }}>{fb.adminReply}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </AuthenticatedLayout>
   );

@@ -151,6 +151,7 @@ function Sidebar() {
         <NavLink to="/chat" style={linkStyle}>💬 Chat</NavLink>
         <NavLink to="/feedback" style={linkStyle}>📝 Feedback</NavLink>
         {role === "admin" && <NavLink to="/admin" style={linkStyle}>⚙️ Admin Panel</NavLink>}
+        {role === "admin" && <NavLink to="/admin/feedback" style={linkStyle}>📋 Feedback Reviews</NavLink>}
       </nav>
 
       <div style={s.footer}>

@@ -132,9 +132,11 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Feedback — any signed-in user can create, admins can read/manage
+    // Feedback — any signed-in user can create, members can read their own, admins can read/manage all
     match /feedback/{feedbackId} {
-      allow read: if isAdmin();
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid || isAdmin()
+      );
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if isAdmin();
     }

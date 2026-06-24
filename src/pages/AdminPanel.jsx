@@ -34,6 +34,7 @@ function AdminPanel() {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [adminRequests, setAdminRequests] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -52,7 +53,16 @@ function AdminPanel() {
       setAdminRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.status === "pending"));
     });
 
-    return () => { unsub1(); unsub2(); };
+    // Listen to feedback
+    const unsub3 = onSnapshot(collection(db, "feedback"), (snap) => {
+      setFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0);
+        const bTime = b.createdAt?.toDate?.() || new Date(0);
+        return bTime - aTime;
+      }));
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   const toggleRole = async (userId, currentRole) => {
@@ -91,6 +101,11 @@ function AdminPanel() {
       await deleteDoc(doc(db, "adminRequests", request.id));
       setMessage("Request rejected.");
     } catch (err) { setError(err.message); }
+  };
+
+  const deleteFeedback = async (id) => {
+    if (!db) return;
+    try { await deleteDoc(doc(db, "feedback", id)); } catch (err) { setError(err.message); }
   };
 
   if (pageLoading) return <AuthenticatedLayout><div style={s.loading}><div style={s.spinner} /><span style={{ color: "#64748b" }}>Loading...</span></div></AuthenticatedLayout>;
@@ -157,6 +172,36 @@ function AdminPanel() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Feedback from Members */}
+        <div style={s.card}>
+          <h3 style={{ margin: "0 0 16px", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+            📝 Member Feedback ({feedbacks.length})
+          </h3>
+          {feedbacks.length === 0 ? (
+            <p style={{ margin: 0, color: "#64748b", fontSize: "0.88rem" }}>No feedback received yet.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {feedbacks.map((fb) => (
+                <div key={fb.id} style={{ padding: "16px 18px", borderRadius: 12, background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: fb.type === "Bug Report" ? "#fee2e2" : fb.type === "Feature Request" ? "#dbeafe" : "#f1f5f9", display: "grid", placeItems: "center", fontSize: "0.9rem", flexShrink: 0 }}>
+                    {fb.type === "Bug Report" ? "🐛" : fb.type === "Feature Request" ? "💡" : fb.type === "Security Issue" ? "🔒" : "💬"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div>
+                        <strong style={{ fontSize: "0.9rem", color: "#0f172a", display: "block" }}>{fb.subject}</strong>
+                        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{fb.fullName || fb.email} · {fb.type} · {fb.createdAt?.toDate ? fb.createdAt.toDate().toLocaleDateString() : "—"}</span>
+                      </div>
+                      <button onClick={() => deleteFeedback(fb.id)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: "0.68rem", fontWeight: 600, background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", cursor: "pointer" }}>Dismiss</button>
+                    </div>
+                    <p style={{ margin: "8px 0 0", fontSize: "0.85rem", color: "#334155", lineHeight: 1.6 }}>{fb.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </AuthenticatedLayout>

@@ -11,6 +11,7 @@ import Teams from "./pages/Teams";
 import TeamDetails from "./pages/TeamDetails";
 import Chat from "./pages/Chat";
 import Feedback from "./pages/Feedback";
+import FeedbackAdmin from "./pages/FeedbackAdmin";
 import AdminRegister from "./pages/AdminRegister";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import BootstrapAdminRoute from "./routes/BootstrapAdminRoute";
@@ -91,6 +92,15 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/feedback"
+          element={
+            <ProtectedRoute requireAdmin>
+              <FeedbackAdmin />
             </ProtectedRoute>
           }
         />

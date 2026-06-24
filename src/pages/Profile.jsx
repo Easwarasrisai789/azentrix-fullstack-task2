@@ -312,6 +312,30 @@ function Profile() {
                 <button style={s.btnPrimary} onClick={handleStartEdit}>Edit Profile</button>
               </div>
             </div>
+
+            {/* Bio / Self Intro */}
+            <div style={{ marginTop: 20, padding: "18px 22px", borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>About</p>
+              <p style={{ margin: 0, fontSize: "0.92rem", color: "#334155", lineHeight: 1.7 }}>
+                {userData?.bio || `Hi, I'm ${displayName}. I work as a ${userData?.jobRole || "team member"} with Employee ID ${userData?.empId || "—"}. Joined the team to collaborate, deliver projects, and grow professionally.`}
+              </p>
+            </div>
+
+            {/* Quick Info */}
+            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div style={{ padding: "14px 16px", borderRadius: 12, background: "#eff6ff", border: "1px solid #dbeafe", textAlign: "center" }}>
+                <p style={{ margin: "0 0 4px", fontSize: "0.7rem", color: "#1e40af", fontWeight: 600, textTransform: "uppercase" }}>Role</p>
+                <strong style={{ fontSize: "0.88rem", color: "#1e40af" }}>{userData?.jobRole || "—"}</strong>
+              </div>
+              <div style={{ padding: "14px 16px", borderRadius: 12, background: "#f0fdf4", border: "1px solid #bbf7d0", textAlign: "center" }}>
+                <p style={{ margin: "0 0 4px", fontSize: "0.7rem", color: "#166534", fontWeight: 600, textTransform: "uppercase" }}>Emp ID</p>
+                <strong style={{ fontSize: "0.88rem", color: "#166534" }}>{userData?.empId || "—"}</strong>
+              </div>
+              <div style={{ padding: "14px 16px", borderRadius: 12, background: "#faf5ff", border: "1px solid #e9d5ff", textAlign: "center" }}>
+                <p style={{ margin: "0 0 4px", fontSize: "0.7rem", color: "#6b21a8", fontWeight: 600, textTransform: "uppercase" }}>Permission</p>
+                <strong style={{ fontSize: "0.88rem", color: "#6b21a8" }}>{profileRole === "admin" ? "Admin" : "Member"}</strong>
+              </div>
+            </div>
           </div>
 
           <div style={s.card}>

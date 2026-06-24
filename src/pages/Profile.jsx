@@ -251,6 +251,7 @@ function Profile() {
   const handleSave = async (e) => {
     e.preventDefault(); if (!currentUser) return; setStatus(null);
     if (!fullName.trim() || !age.toString().trim() || !empId.trim() || !jobRole.trim()) { setStatus({ type: "error", message: "All fields required." }); return; }
+    if (!/^\d{3}$/.test(empId.trim())) { setStatus({ type: "error", message: "Employee ID must be exactly 3 digits (e.g. 001, 123, 456)." }); return; }
     try {
       // Check empId uniqueness (skip if it hasn't changed)
       if (empId.trim() !== userData?.empId) {

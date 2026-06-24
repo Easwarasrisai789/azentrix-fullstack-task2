@@ -32,7 +32,6 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(null);
     if (!fullName.trim() || !age.trim() || !empId.trim() || !jobRole.trim()) { setError("All fields are required."); return; }
-    if (!/^\d{3}$/.test(empId.trim())) { setError("Employee ID must be exactly 3 digits (e.g. 001, 123, 456)."); return; }
     if (!auth || !db) { setError("Firebase not configured."); return; }
     setSubmitting(true);
     try {
@@ -85,7 +84,7 @@ function Register() {
               <div><label style={s.label}>Age</label><input style={s.input} placeholder="25" type="number" min="18" value={age} onChange={(e) => setAge(e.target.value)} /></div>
             </div>
             <div style={s.row}>
-              <div><label style={s.label}>Employee ID</label><input style={s.input} placeholder="3 digits (e.g. 001)" value={empId} onChange={(e) => setEmpId(e.target.value)} maxLength={3} /></div>
+              <div><label style={s.label}>Employee ID</label><input style={s.input} placeholder="EMP-001" value={empId} onChange={(e) => setEmpId(e.target.value)} /></div>
               <div><label style={s.label}>Job Role</label><input style={s.input} placeholder="frontend" value={jobRole} onChange={(e) => setJobRole(e.target.value)} /></div>
             </div>
             <div><label style={s.label}>Email</label><input style={s.input} type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>

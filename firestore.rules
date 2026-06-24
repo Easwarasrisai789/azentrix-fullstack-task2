@@ -23,14 +23,7 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow create: if isSignedIn() && request.auth.uid == userId && (
-        request.resource.data.role == 'member'
-        || isAdmin()
-        || (
-          request.resource.data.role == 'admin'
-          && !exists(/databases/$(database)/documents/meta/bootstrap)
-        )
-      );
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn();
       // Users can update own profile (but not change their own role)
       // Admins can update any user (including role changes)

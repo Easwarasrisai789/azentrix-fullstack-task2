@@ -35,14 +35,32 @@ function Register() {
     if (!auth || !db) { setError("Firebase not configured."); return; }
     setSubmitting(true);
     try {
-      // Check if empId is already taken
-      const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
-      if (!empIdCheck.empty) { setError("This Employee ID is already taken. Please use a unique ID."); setSubmitting(false); return; }
-
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName, age: Number(age), empId, createdAt: new Date() });
+
+      // Check if empId is already taken (now authenticated, can read Firestore)
+      const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+      if (!empIdCheck.empty) {
+        // Delete the just-created auth account since empId is taken
+        await cred.user.delete();
+        setError("This Employee ID is already registered. Please use a unique ID.");
+        setSubmitting(false);
+        return;
+      }
+
+      await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName, age: Number(age), empId: empId.trim(), createdAt: new Date() });
       navigate("/dashboard", { replace: true });
-    } catch (err) { setError(err.message); } finally { setSubmitting(false); }
+    } catch (err) {
+      const code = err.code;
+      if (code === "auth/email-already-in-use") {
+        setError("This email is already registered. Please login instead.");
+      } else if (code === "auth/weak-password") {
+        setError("Password must be at least 6 characters.");
+      } else if (code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else {
+        setError(err.message);
+      }
+    } finally { setSubmitting(false); }
   };
 
   useEffect(() => { if (!loading && currentUser) navigate("/dashboard", { replace: true }); }, [currentUser, loading, navigate]);

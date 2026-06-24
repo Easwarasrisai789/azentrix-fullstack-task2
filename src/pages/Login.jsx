@@ -42,7 +42,20 @@ function Login() {
     e.preventDefault(); setError(null);
     if (!auth) { setError("Firebase not configured."); return; }
     setSubmitting(true);
-    try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError(err.message); } finally { setSubmitting(false); }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      const code = err.code;
+      if (code === "auth/invalid-login-credentials" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+        setError("Incorrect email or password. Please try again.");
+      } else if (code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError(err.message);
+      }
+    } finally { setSubmitting(false); }
   };
 
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}><span style={{ color: "#64748b" }}>Loading...</span></div>;

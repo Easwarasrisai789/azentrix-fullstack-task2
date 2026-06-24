@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { collection, addDoc, onSnapshot, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
@@ -33,7 +32,6 @@ const s = {
 };
 
 function Dashboard() {
-  const navigate = useNavigate();
   const { currentUser, role, loading } = useAuth();
   const [boards, setBoards] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -57,7 +55,9 @@ function Dashboard() {
         const usersSnap = await getDocs(collection(db, "users"));
         setTotalMembers(usersSnap.size);
         let total = 0, done = 0;
+        // eslint-disable-next-line no-loop-func
         for (const team of loaded) { const ts = await getDocs(collection(db, "teams", team.id, "tasks")); total += ts.size; ts.docs.forEach((t) => { if (t.data().status === "Done") done++; }); }
+        // eslint-disable-next-line no-loop-func
         for (const board of boards) { const ts = await getDocs(collection(db, "boards", board.id, "tasks")); total += ts.size; ts.docs.forEach((t) => { if (t.data().status === "Done") done++; }); }
         setTotalTasks(total); setCompletedTasks(done); setPendingTasks(total - done);
       } catch (e) { console.error(e); }

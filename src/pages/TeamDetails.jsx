@@ -68,11 +68,6 @@ function TeamDetails() {
     return grouped;
   }, [tasks]);
 
-  const canEditTask = (task) => {
-    if (!currentUser) return false;
-    return role === "admin" || task.assignee === currentUser.email || task.assigneeEmpId === userData?.empId || task.createdBy === currentUser.uid;
-  };
-
   const isTaskAssignee = (task) => {
     if (!currentUser) return false;
     // Support comma-separated empIds for group tasks

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
 
@@ -35,6 +35,10 @@ function Register() {
     if (!auth || !db) { setError("Firebase not configured."); return; }
     setSubmitting(true);
     try {
+      // Check if empId is already taken
+      const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+      if (!empIdCheck.empty) { setError("This Employee ID is already taken. Please use a unique ID."); setSubmitting(false); return; }
+
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName, age: Number(age), empId, createdAt: new Date() });
       navigate("/dashboard", { replace: true });

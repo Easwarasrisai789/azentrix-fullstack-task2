@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from "react";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
@@ -252,6 +252,11 @@ function Profile() {
     e.preventDefault(); if (!currentUser) return; setStatus(null);
     if (!fullName.trim() || !age.toString().trim() || !empId.trim() || !jobRole.trim()) { setStatus({ type: "error", message: "All fields required." }); return; }
     try {
+      // Check empId uniqueness (skip if it hasn't changed)
+      if (empId.trim() !== userData?.empId) {
+        const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+        if (!empIdCheck.empty) { setStatus({ type: "error", message: "This Employee ID is already taken." }); return; }
+      }
       await setDoc(doc(db, "users", currentUser.uid), { email: currentUser.email, role: profileRole === "admin" ? "admin" : "member", jobRole: jobRole.trim().toLowerCase(), fullName: fullName.trim(), age: Number(age), empId: empId.trim(), photoURL: userData?.photoURL || null }, { merge: true });
       setStatus({ type: "success", message: "Profile updated." }); setIsEditing(false);
     } catch (err) { setStatus({ type: "error", message: err.message }); }

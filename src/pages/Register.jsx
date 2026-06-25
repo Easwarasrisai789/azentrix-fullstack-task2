@@ -28,10 +28,25 @@ function Register() {
   const [fullName, setFullName] = useState(""); const [age, setAge] = useState("");
   const [empId, setEmpId] = useState(""); const [jobRole, setJobRole] = useState("");
   const [error, setError] = useState(null); const [submitting, setSubmitting] = useState(false);
+  const [empIdError, setEmpIdError] = useState("");
+
+  // Real-time empId check as user types
+  useEffect(() => {
+    if (!empId.trim() || !db) { setEmpIdError(""); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const snap = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+        if (!snap.empty) { setEmpIdError("This Employee ID is already taken."); }
+        else { setEmpIdError(""); }
+      } catch { setEmpIdError(""); }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [empId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(null);
     if (!fullName.trim() || !age.trim() || !empId.trim() || !jobRole.trim()) { setError("All fields are required."); return; }
+    if (empIdError) { setError("Please use a different Employee ID — this one is taken."); return; }
     if (!email.trim()) { setError("Please enter your email."); return; }
     if (!password || password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (!auth || !db) { setError("Firebase not configured."); return; }
@@ -82,7 +97,11 @@ function Register() {
               <div><label style={s.label}>Age</label><input style={s.input} placeholder="25" type="number" min="18" value={age} onChange={(e) => setAge(e.target.value)} /></div>
             </div>
             <div style={s.row}>
-              <div><label style={s.label}>Employee ID</label><input style={s.input} placeholder="EMP-001" value={empId} onChange={(e) => setEmpId(e.target.value)} /></div>
+              <div>
+                <label style={s.label}>Employee ID</label>
+                <input style={{ ...s.input, ...(empIdError ? { borderColor: "#dc2626" } : {}) }} placeholder="EMP-001" value={empId} onChange={(e) => setEmpId(e.target.value)} />
+                {empIdError && <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#dc2626", fontWeight: 600 }}>{empIdError}</p>}
+              </div>
               <div><label style={s.label}>Job Role</label><input style={s.input} placeholder="frontend" value={jobRole} onChange={(e) => setJobRole(e.target.value)} /></div>
             </div>
             <div><label style={s.label}>Email</label><input style={s.input} type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>

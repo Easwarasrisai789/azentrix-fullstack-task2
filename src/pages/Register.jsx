@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInAnonymously, signOut } from "firebase/auth";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
@@ -29,10 +29,36 @@ function Register() {
   const [empId, setEmpId] = useState(""); const [jobRole, setJobRole] = useState("");
   const [error, setError] = useState(null); const [submitting, setSubmitting] = useState(false);
   const [empIdError, setEmpIdError] = useState("");
+  const [empIdVerified, setEmpIdVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const verifyEmpId = async () => {
+    if (!empId.trim()) { setEmpIdError("Enter an Employee ID first."); return; }
+    if (!db || !auth) return;
+    setVerifying(true); setEmpIdError(""); setEmpIdVerified(false);
+    try {
+      // Sign in anonymously to check Firestore
+      const anonCred = await signInAnonymously(auth);
+      const snap = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+      // Sign out anonymous user
+      await signOut(auth);
+      if (!snap.empty) {
+        setEmpIdError("This Employee ID is already taken. Use a different one.");
+        setEmpIdVerified(false);
+      } else {
+        setEmpIdError("");
+        setEmpIdVerified(true);
+      }
+    } catch (err) {
+      setEmpIdError("Unable to verify. Please try again.");
+      try { await signOut(auth); } catch {}
+    } finally { setVerifying(false); }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(null);
     if (!fullName.trim() || !age.trim() || !empId.trim() || !jobRole.trim()) { setError("All fields are required."); return; }
+    if (!empIdVerified) { setError("Please verify your Employee ID before creating account."); return; }
     if (!email.trim()) { setError("Please enter your email."); return; }
     if (!password || password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (!auth || !db) { setError("Firebase not configured."); return; }
@@ -87,8 +113,24 @@ function Register() {
             <div style={s.row}>
               <div>
                 <label style={s.label}>Employee ID</label>
-                <input style={{ ...s.input, ...(empIdError ? { borderColor: "#dc2626" } : {}) }} placeholder="EMP-001" value={empId} onChange={(e) => setEmpId(e.target.value)} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    style={{ ...s.input, flex: 1, ...(empIdError ? { borderColor: "#dc2626" } : empIdVerified ? { borderColor: "#059669" } : {}) }}
+                    placeholder="EMP-001"
+                    value={empId}
+                    onChange={(e) => { setEmpId(e.target.value); setEmpIdVerified(false); setEmpIdError(""); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={verifyEmpId}
+                    disabled={verifying || !empId.trim()}
+                    style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: empIdVerified ? "#059669" : "#4f46e5", color: "white", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", opacity: verifying ? 0.6 : 1 }}
+                  >
+                    {verifying ? "..." : empIdVerified ? "✓ Available" : "Verify"}
+                  </button>
+                </div>
                 {empIdError && <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#dc2626", fontWeight: 600 }}>{empIdError}</p>}
+                {empIdVerified && <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#059669", fontWeight: 600 }}>✓ This Employee ID is available</p>}
               </div>
               <div><label style={s.label}>Job Role</label><input style={s.input} placeholder="frontend" value={jobRole} onChange={(e) => setJobRole(e.target.value)} /></div>
             </div>

@@ -152,6 +152,7 @@ function Sidebar() {
         <NavLink to="/feedback" style={linkStyle}>📝 Feedback</NavLink>
         {role === "admin" && <NavLink to="/admin" style={linkStyle}>⚙️ Admin Panel</NavLink>}
         {role === "admin" && <NavLink to="/admin/feedback" style={linkStyle}>📋 Feedback Reviews</NavLink>}
+        {currentUser?.email === "easwarasrisaivenkat.a@gmail.com" && <NavLink to="/super-admin" style={linkStyle}>🔐 Super Admin</NavLink>}
       </nav>
 
       <div style={s.footer}>

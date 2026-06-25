@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
 
@@ -108,6 +108,16 @@ function Sidebar() {
   const { currentUser, userData, role, signOutUser } = useAuth();
   const displayName = userData?.fullName || userData?.email?.split("@")[0] || "Member";
   const [requestStatus, setRequestStatus] = useState(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!db || !currentUser) return;
+    const unsub = onSnapshot(collection(db, "superAdmins"), (snap) => {
+      const emails = snap.docs.map((d) => d.data().email);
+      setIsSuperAdmin(currentUser.email === "easwarasrisaivenkat.a@gmail.com" || emails.includes(currentUser.email));
+    });
+    return () => unsub();
+  }, [currentUser]);
 
   const linkStyle = ({ isActive }) => ({
     ...s.link,
@@ -152,7 +162,7 @@ function Sidebar() {
         <NavLink to="/feedback" style={linkStyle}>📝 Feedback</NavLink>
         {role === "admin" && <NavLink to="/admin" style={linkStyle}>⚙️ Admin Panel</NavLink>}
         {role === "admin" && <NavLink to="/admin/feedback" style={linkStyle}>📋 Feedback Reviews</NavLink>}
-        {currentUser?.email === "easwarasrisaivenkat.a@gmail.com" && <NavLink to="/super-admin" style={linkStyle}>🔐 Super Admin</NavLink>}
+        {isSuperAdmin && <NavLink to="/super-admin" style={linkStyle}>🔐 Super Admin</NavLink>}
       </nav>
 
       <div style={s.footer}>

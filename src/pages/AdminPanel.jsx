@@ -56,7 +56,19 @@ function AdminPanel() {
   }, []);
 
   const SUPER_ADMIN_EMAIL = "easwarasrisaivenkat.a@gmail.com";
-  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
+  const [superAdminEmails, setSuperAdminEmails] = useState([SUPER_ADMIN_EMAIL]);
+
+  // Load super admins list
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onSnapshot(collection(db, "superAdmins"), (snap) => {
+      const emails = snap.docs.map((d) => d.data().email).filter(Boolean);
+      setSuperAdminEmails([SUPER_ADMIN_EMAIL, ...emails]);
+    });
+    return () => unsub();
+  }, []);
+
+  const isSuperAdmin = superAdminEmails.includes(currentUser?.email);
 
   const toggleRole = async (userId, currentRole) => {
     if (!db) return;
@@ -69,7 +81,7 @@ function AdminPanel() {
     if (currentRole === "admin" && !isSuperAdmin) { setError("Only the Super Admin can revoke admin access."); return; }
 
     // Can't revoke super admin ever
-    if (targetUser?.email === SUPER_ADMIN_EMAIL && currentRole === "admin") { setError("Super Admin cannot be revoked."); return; }
+    if (superAdminEmails.includes(targetUser?.email) && currentRole === "admin") { setError("Super Admin cannot be revoked."); return; }
 
     setLoading(true); setMessage(null); setError(null);
     try { await updateDoc(doc(db, "users", userId), { role: currentRole === "admin" ? "member" : "admin" }); setMessage("Role updated."); }
@@ -109,7 +121,7 @@ function AdminPanel() {
   const deleteUser = async (user) => {
     if (!db) return;
     // Can't delete super admin
-    if (user.email === SUPER_ADMIN_EMAIL) { setError("Super Admin cannot be deleted."); return; }
+    if (superAdminEmails.includes(user.email)) { setError("Super Admin cannot be deleted."); return; }
     // Only super admin can delete other admins
     if (user.role === "admin" && !isSuperAdmin) { setError("Only Super Admin can delete admin accounts."); return; }
     if (!window.confirm(`Delete user "${user.fullName || user.email}"? This will remove their profile data.`)) return;
@@ -179,7 +191,7 @@ function AdminPanel() {
                     <span style={{ fontWeight: 600, color: u.role === "admin" ? "#1d4ed8" : "#64748b" }}>
                       {u.role}
                     </span>
-                    {u.email === SUPER_ADMIN_EMAIL && (
+                    {superAdminEmails.includes(u.email) && (
                       <span style={{ marginLeft: 6, padding: "2px 7px", borderRadius: 999, fontSize: "0.6rem", fontWeight: 700, background: "#fef3c7", color: "#92400e" }}>SUPER</span>
                     )}
                   </td>

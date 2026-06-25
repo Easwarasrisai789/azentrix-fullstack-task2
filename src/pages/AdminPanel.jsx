@@ -65,9 +65,22 @@ function AdminPanel() {
     return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
+  const SUPER_ADMIN_EMAIL = "easwarasrisaivenkat.a@gmail.com";
+  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
+
   const toggleRole = async (userId, currentRole) => {
     if (!db) return;
-    if (userId === currentUser?.uid && currentRole === "admin") { setError("Cannot revoke own admin."); return; }
+    const targetUser = users.find((u) => u.id === userId);
+
+    // Can't revoke own admin
+    if (userId === currentUser?.uid && currentRole === "admin") { setError("Cannot revoke your own admin access."); return; }
+
+    // Only super admin can revoke other admins
+    if (currentRole === "admin" && !isSuperAdmin) { setError("Only the Super Admin can revoke admin access."); return; }
+
+    // Can't revoke super admin ever
+    if (targetUser?.email === SUPER_ADMIN_EMAIL && currentRole === "admin") { setError("Super Admin cannot be revoked."); return; }
+
     setLoading(true); setMessage(null); setError(null);
     try { await updateDoc(doc(db, "users", userId), { role: currentRole === "admin" ? "member" : "admin" }); setMessage("Role updated."); }
     catch (err) { setError(err.message); } finally { setLoading(false); }
@@ -105,6 +118,10 @@ function AdminPanel() {
 
   const deleteUser = async (user) => {
     if (!db) return;
+    // Can't delete super admin
+    if (user.email === SUPER_ADMIN_EMAIL) { setError("Super Admin cannot be deleted."); return; }
+    // Only super admin can delete other admins
+    if (user.role === "admin" && !isSuperAdmin) { setError("Only Super Admin can delete admin accounts."); return; }
     if (!window.confirm(`Delete user "${user.fullName || user.email}"? This will remove their profile data.`)) return;
     setLoading(true); setMessage(null); setError(null);
     try {
@@ -173,7 +190,14 @@ function AdminPanel() {
                 <tr key={u.id}>
                   <td style={s.td}>{u.fullName || "—"}</td>
                   <td style={s.td}>{u.email}</td>
-                  <td style={s.td}><span style={{ fontWeight: 600, color: u.role === "admin" ? "#1d4ed8" : "#64748b" }}>{u.role}</span></td>
+                  <td style={s.td}>
+                    <span style={{ fontWeight: 600, color: u.role === "admin" ? "#1d4ed8" : "#64748b" }}>
+                      {u.role}
+                    </span>
+                    {u.email === SUPER_ADMIN_EMAIL && (
+                      <span style={{ marginLeft: 6, padding: "2px 7px", borderRadius: 999, fontSize: "0.6rem", fontWeight: 700, background: "#fef3c7", color: "#92400e" }}>SUPER</span>
+                    )}
+                  </td>
                   <td style={s.td}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button style={s.roleBtn} onClick={() => toggleRole(u.id, u.role)} disabled={loading || (u.id === currentUser?.uid && u.role === "admin")}>

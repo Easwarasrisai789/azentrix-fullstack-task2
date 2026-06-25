@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { createUserWithEmailAndPassword, signInAnonymously, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
@@ -37,10 +37,12 @@ function Register() {
     if (!db || !auth) return;
     setVerifying(true); setEmpIdError(""); setEmpIdVerified(false);
     try {
-      // Sign in anonymously to check Firestore
-      const anonCred = await signInAnonymously(auth);
+      // Use anonymous auth to temporarily authenticate for the check
+      await signInAnonymously(auth);
+      // Small delay to let auth settle
+      await new Promise((r) => setTimeout(r, 500));
       const snap = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
-      // Sign out anonymous user
+      // Sign out anonymous immediately
       await signOut(auth);
       if (!snap.empty) {
         setEmpIdError("This Employee ID is already taken. Use a different one.");
@@ -50,7 +52,7 @@ function Register() {
         setEmpIdVerified(true);
       }
     } catch (err) {
-      setEmpIdError("Unable to verify. Please try again.");
+      setEmpIdError("Unable to verify. Enable Anonymous Auth in Firebase Console.");
       try { await signOut(auth); } catch {}
     } finally { setVerifying(false); }
   };
@@ -116,7 +118,7 @@ function Register() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     style={{ ...s.input, flex: 1, ...(empIdError ? { borderColor: "#dc2626" } : empIdVerified ? { borderColor: "#059669" } : {}) }}
-                    placeholder="EMP-001"
+                    placeholder="001"
                     value={empId}
                     onChange={(e) => { setEmpId(e.target.value); setEmpIdVerified(false); setEmpIdError(""); }}
                   />

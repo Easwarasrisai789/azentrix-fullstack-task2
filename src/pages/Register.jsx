@@ -30,23 +30,9 @@ function Register() {
   const [error, setError] = useState(null); const [submitting, setSubmitting] = useState(false);
   const [empIdError, setEmpIdError] = useState("");
 
-  // Real-time empId check as user types
-  useEffect(() => {
-    if (!empId.trim() || !db) { setEmpIdError(""); return; }
-    const timer = setTimeout(async () => {
-      try {
-        const snap = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
-        if (!snap.empty) { setEmpIdError("This Employee ID is already taken."); }
-        else { setEmpIdError(""); }
-      } catch { setEmpIdError(""); }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [empId]);
-
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(null);
     if (!fullName.trim() || !age.trim() || !empId.trim() || !jobRole.trim()) { setError("All fields are required."); return; }
-    if (empIdError) { setError("Please use a different Employee ID — this one is taken."); return; }
     if (!email.trim()) { setError("Please enter your email."); return; }
     if (!password || password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (!auth || !db) { setError("Firebase not configured."); return; }
@@ -58,10 +44,12 @@ function Register() {
       const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
       if (!empIdCheck.empty) {
         await cred.user.delete();
-        setError("This Employee ID is already registered. Choose a different one.");
+        setEmpIdError("This Employee ID already exists. Please use a different one.");
+        setError("Employee ID is already registered. Choose a unique ID.");
         setSubmitting(false);
         return;
       }
+      setEmpIdError("");
 
       await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName: fullName.trim(), age: Number(age), empId: empId.trim(), createdAt: new Date() });
       navigate("/dashboard", { replace: true });

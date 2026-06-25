@@ -32,27 +32,23 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(null);
     if (!fullName.trim() || !age.trim() || !empId.trim() || !jobRole.trim()) { setError("All fields are required."); return; }
+    if (!email.trim()) { setError("Please enter your email."); return; }
+    if (!password || password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (!auth || !db) { setError("Firebase not configured."); return; }
     setSubmitting(true);
     try {
-      // Create auth account first
       const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Now authenticated — check if empId is taken
-      try {
-        const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
-        if (!empIdCheck.empty) {
-          await cred.user.delete();
-          setError("This Employee ID is already registered. Please use a unique ID.");
-          setSubmitting(false);
-          return;
-        }
-      } catch (permErr) {
-        // If permission error on read, just proceed (empId will be saved, uniqueness is best-effort)
+      // Check empId uniqueness after auth (now signed in, can read Firestore)
+      const empIdCheck = await getDocs(query(collection(db, "users"), where("empId", "==", empId.trim())));
+      if (!empIdCheck.empty) {
+        await cred.user.delete();
+        setError("This Employee ID is already registered. Choose a different one.");
+        setSubmitting(false);
+        return;
       }
 
-      // Save user profile
-      await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName, age: Number(age), empId: empId.trim(), createdAt: new Date() });
+      await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, role: "member", jobRole: jobRole.trim().toLowerCase(), fullName: fullName.trim(), age: Number(age), empId: empId.trim(), createdAt: new Date() });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       const code = err.code;
@@ -62,8 +58,10 @@ function Register() {
         setError("Password must be at least 6 characters.");
       } else if (code === "auth/invalid-email") {
         setError("Please enter a valid email address.");
+      } else if (err.message?.includes("permission") || err.message?.includes("Permission")) {
+        setError("Unable to create account. Please try again in a moment.");
       } else {
-        setError(err.message);
+        setError("Something went wrong. Please try again.");
       }
     } finally { setSubmitting(false); }
   };

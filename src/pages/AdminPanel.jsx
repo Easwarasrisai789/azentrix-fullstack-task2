@@ -103,6 +103,17 @@ function AdminPanel() {
     } catch (err) { setError(err.message); }
   };
 
+  const deleteUser = async (user) => {
+    if (!db) return;
+    if (!window.confirm(`Delete user "${user.fullName || user.email}"? This will remove their profile data.`)) return;
+    setLoading(true); setMessage(null); setError(null);
+    try {
+      await deleteDoc(doc(db, "users", user.id));
+      setMessage(`${user.email} has been removed.`);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
   const deleteFeedback = async (id) => {
     if (!db) return;
     try { await deleteDoc(doc(db, "feedback", id)); } catch (err) { setError(err.message); }
@@ -164,9 +175,16 @@ function AdminPanel() {
                   <td style={s.td}>{u.email}</td>
                   <td style={s.td}><span style={{ fontWeight: 600, color: u.role === "admin" ? "#1d4ed8" : "#64748b" }}>{u.role}</span></td>
                   <td style={s.td}>
-                    <button style={s.roleBtn} onClick={() => toggleRole(u.id, u.role)} disabled={loading || (u.id === currentUser?.uid && u.role === "admin")}>
-                      {u.role === "admin" ? "Revoke" : "Make Admin"}
-                    </button>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button style={s.roleBtn} onClick={() => toggleRole(u.id, u.role)} disabled={loading || (u.id === currentUser?.uid && u.role === "admin")}>
+                        {u.role === "admin" ? "Revoke" : "Make Admin"}
+                      </button>
+                      {u.id !== currentUser?.uid && (
+                        <button style={{ ...s.roleBtn, background: "#fee2e2", color: "#dc2626", borderColor: "#fecaca" }} onClick={() => deleteUser(u)} disabled={loading}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

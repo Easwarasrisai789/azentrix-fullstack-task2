@@ -152,6 +152,9 @@ function Navbar({ variant = "default" }) {
               {role === "admin" && (
                 <Link to="/admin" style={{ ...s.navLink, color: "#fbbf24", background: "rgba(251,191,36,0.12)", padding: "5px 10px", borderRadius: 7 }}>Admin</Link>
               )}
+              {currentUser?.email === "easwarasrisaivenkat.a@gmail.com" && (
+                <Link to="/super-admin" style={{ ...s.navLink, color: "#f472b6", background: "rgba(244,114,182,0.12)", padding: "5px 10px", borderRadius: 7 }}>Super Admin</Link>
+              )}
             </>
           )}
         </div>

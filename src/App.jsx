@@ -12,6 +12,7 @@ import TeamDetails from "./pages/TeamDetails";
 import Chat from "./pages/Chat";
 import Feedback from "./pages/Feedback";
 import FeedbackAdmin from "./pages/FeedbackAdmin";
+import SuperAdmin from "./pages/SuperAdmin";
 import AdminRegister from "./pages/AdminRegister";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import BootstrapAdminRoute from "./routes/BootstrapAdminRoute";
@@ -101,6 +102,15 @@ function App() {
           element={
             <ProtectedRoute requireAdmin>
               <FeedbackAdmin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/super-admin"
+          element={
+            <ProtectedRoute requireAdmin>
+              <SuperAdmin />
             </ProtectedRoute>
           }
         />
